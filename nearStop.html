@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Nearest Bus Stand Info</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <style>
+    body { background: #f8f9fa; }
+    .navbar { margin-bottom: 15px; }
+    #map { height: 55vh; border-radius: 10px; }
+    .emoji-marker { font-size: 26px; text-align: center; }
+    .info-panel {
+      background: #fff;
+      padding: 15px;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      margin-top: 10px;
+    }
+    .info-panel h5 { color: #dc3545; }
+    .bus-stop-list {
+      margin-top: 20px;
+    }
+    .bus-stop-list .card {
+      margin-bottom: 10px;
+      border-left: 5px solid #dc3545;
+    }
+    .bus-stop-list h6 { margin: 0; }
+  </style>
+</head>
+<body>
+  <!-- Navbar -->
+  <nav class="navbar navbar-expand-lg navbar-dark bg-danger">
+    <div class="container-fluid">
+      <a class="navbar-brand fw-bold" href="index.html">
+        <img src="unnamed-removebg-preview.png" alt="PSRTC Logo" width="150"  class="me-2">
+      </a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse" id="navbarNav">
+        <ul class="navbar-nav ms-auto">
+          <li class="nav-item"><a class="nav-link" href="index.html">Home</a></li>
+          <li class="nav-item"><a class="nav-link active" href="#">Nearest Bus Stand</a></li>
+          <li class="nav-item"><a class="nav-link" href="timetable.html">Timetable</a></li>
+        </ul>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Map -->
+  <div class="container">
+    <div id="map"></div>
+    
+    <!-- Route Information -->
+    <div class="info-panel mt-3" id="route-info">
+      <h5>ℹ️ Route Information</h5>
+      <p>Select a bus stop to view distance and ETA.</p>
+    </div>
+
+    <!-- Bus Stop List -->
+    <div class="bus-stop-list" id="bus-stop-list">
+      <h5 class="text-danger">🚌 Bus Stops & Supported Routes</h5>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet-routing-machine/dist/leaflet-routing-machine.min.js"></script>
+  <script>
+    const map = L.map("map").setView([30.9, 75.85], 8);
+
+    // Tiles
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      attribution: "© OpenStreetMap contributors"
+    }).addTo(map);
+
+    // Icons
+    const passengerIcon = L.divIcon({ className: "emoji-marker", html: "🧍", iconSize: [30,30], iconAnchor: [15,30] });
+    const busStopIcon = L.divIcon({ className: "emoji-marker", html: "🏛️", iconSize: [30,30], iconAnchor: [15,30] });
+
+    let passengerMarker, currentRoute;
+
+    // Punjab bus stops + sample routes
+    const busStops = [
+      { name: "Ludhiana Bus Stand", lat: 30.91, lng: 75.85, routes: "Ludhiana – Chandigarh, Ludhiana – Amritsar" },
+      { name: "Chandigarh Bus Stand", lat: 30.74, lng: 76.79, routes: "Chandigarh – Delhi, Chandigarh – Patiala" },
+      { name: "Patiala Bus Stand", lat: 30.34, lng: 76.39, routes: "Patiala – Rajpura, Patiala – Bathinda" },
+      { name: "Amritsar Bus Stand", lat: 31.63, lng: 74.87, routes: "Amritsar – Jalandhar, Amritsar – Pathankot" },
+      { name: "Jalandhar Bus Stand", lat: 31.33, lng: 75.57, routes: "Jalandhar – Hoshiarpur, Jalandhar – Kapurthala" },
+      { name: "Bathinda Bus Stand", lat: 30.21, lng: 74.95, routes: "Bathinda – Faridkot, Bathinda – Mansa" },
+      { name: "Ferozepur Bus Stand", lat: 30.93, lng: 74.62, routes: "Ferozepur – Muktsar, Ferozepur – Fazilka" },
+      { name: "Moga Bus Stand", lat: 30.82, lng: 75.17, routes: "Moga – Barnala, Moga – Ludhiana" },
+      { name: "Hoshiarpur Bus Stand", lat: 31.53, lng: 75.92, routes: "Hoshiarpur – Dasuya, Hoshiarpur – Jalandhar" },
+      { name: "Sangrur Bus Stand", lat: 30.25, lng: 75.84, routes: "Sangrur – Barnala, Sangrur – Patiala" },
+      { name: "Pathankot Bus Stand", lat: 32.27, lng: 75.65, routes: "Pathankot – Amritsar, Pathankot – Gurdaspur" },
+      { name: "Muktsar Bus Stand", lat: 30.47, lng: 74.52, routes: "Muktsar – Malout, Muktsar – Ferozepur" },
+      { name: "Rajpura Bus Stand", lat: 30.48, lng: 76.59, routes: "Rajpura – Chandigarh, Rajpura – Patiala" }
+    ];
+
+    // Add bus stops to map + list
+    function addBusStops(userLat, userLng) {
+      const listDiv = document.getElementById("bus-stop-list");
+      listDiv.innerHTML = "<h5 class='text-danger'>🚌 Bus Stops & Supported Routes</h5>";
+
+      busStops.forEach(stop => {
+        // Marker
+        L.marker([stop.lat, stop.lng], { icon: busStopIcon })
+          .addTo(map)
+          .bindPopup(`<b>${stop.name}</b><br>
+            <button class="btn btn-sm btn-danger" 
+              onclick="showRoute(${userLat},${userLng},${stop.lat},${stop.lng},'${stop.name}')">
+              Show Route
+            </button>`);
+
+        // Info list
+        const card = document.createElement("div");
+        card.className = "card p-2";
+        card.innerHTML = `<h6>${stop.name}</h6><p class="text-muted">${stop.routes}</p>`;
+        listDiv.appendChild(card);
+      });
+    }
+
+    // Show route
+    function showRoute(lat1, lng1, lat2, lng2, stopName) {
+      if (currentRoute) map.removeControl(currentRoute);
+
+      currentRoute = L.Routing.control({
+        waypoints: [L.latLng(lat1, lng1), L.latLng(lat2, lng2)],
+        routeWhileDragging: false,
+        createMarker: () => null
+      }).on("routesfound", function(e) {
+        const route = e.routes[0];
+        const distance = (route.summary.totalDistance / 1000).toFixed(2);
+        const time = Math.round(route.summary.totalTime / 60);
+
+        document.getElementById("route-info").innerHTML = `
+          <h5>🚌 Route to ${stopName}</h5>
+          <p><b>Distance:</b> ${distance} km</p>
+          <p><b>Estimated Time:</b> ${time} min</p>
+        `;
+      }).addTo(map);
+
+      map.setView([lat2, lng2], 11);
+    }
+
+    // Track passenger live
+    if (navigator.geolocation) {
+      navigator.geolocation.watchPosition(
+        (pos) => {
+          const userLat = pos.coords.latitude;
+          const userLng = pos.coords.longitude;
+
+          if (!passengerMarker) {
+            passengerMarker = L.marker([userLat, userLng], { icon: passengerIcon })
+              .addTo(map)
+              .bindPopup("📍 You are here (Passenger)")
+              .openPopup();
+            addBusStops(userLat, userLng);
+          } else {
+            passengerMarker.setLatLng([userLat, userLng]);
+          }
+        },
+        (err) => alert("Error: " + err.message),
+        { enableHighAccuracy: true }
+      );
+    }
+
+    window.showRoute = showRoute;
+  </script>
+</body>
+</html>

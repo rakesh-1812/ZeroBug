@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>BUS_serves</title>
+
+  <!-- Bootstrap -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+
+  <!-- Leaflet -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+
+  <style>
+    /* ---------- page layout ---------- */
+    :root{
+      --brand:#dc3545;
+      --muted:#6c757d;
+      --card-bg:#ffffff;
+      --page-bg:#fafafa;
+    }
+    body{
+      font-family: "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial;
+      background: var(--page-bg);
+      margin-top: 70px; /* for fixed navbar */
+    }
+.hero {
+  background: url('PRTC-operator-mobile.jpeg') no-repeat center center/cover;
+  height: 70vh;
+  position: relative;
+  margin-top: 56px; /* navbar height */
+}
+
+.hero .search-box {
+  max-width: 700px;
+}
+
+
+    /* Our Services cards - keep your style */
+.card .mx-auto { width: 64px; height: 64px; object-fit: contain; }
+
+    /* map container area (replaces static image) */
+    #mapSection { padding: 40px 0; }
+    .map-card {
+      background: var(--card-bg);
+      padding: 18px;
+      border-radius: 12px;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.08);
+    }
+    #map {
+      width: 100%;
+      height: 52vh;           /* moderate size - visible on all screens */
+      min-height: 360px;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    /* info panel under map */
+    .route-info {
+      margin-top: 14px;
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+    .text-box{
+      display:flex;
+      flex-direction:column;
+      justify-content:center;
+    }
+    .nearby-list {
+      flex: 1 1 320px;
+      min-width: 260px;
+      max-height: 36vh;
+      overflow: auto;
+    }
+    .map-actions {
+      flex: 0 1 280px;
+      min-width: 220px;
+    }
+    .bus-card { border-left: 4px solid var(--brand); margin-bottom: 10px; }
+    .emoji-marker { font-size: 22px; line-height: 1; text-align:center; }
+
+    /* spinner overlay */
+ .loading-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(255, 255, 255, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+}
+
+    /* responsive tweaks */
+    @media (max-width: 768px){
+      #map { height: 48vh; min-height: 300px; }
+      .search-box .row > * { margin-bottom: 8px; }
+    }
+  </style>
+</head>
+<body>
+
+ <!-- Navbar -->
+<nav class="navbar navbar-expand-lg navbar-dark bg-danger fixed-top shadow-sm">
+  <div class="container">
+    <!-- Brand -->
+    <a class="navbar-brand fw-bold" href="#">
+      <img src="unnamed-removebg-preview.png" alt="PSRTC Logo" width="150"  class="me-2">
+    </a>
+
+    <!-- Mobile toggle button -->
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+
+    <!-- Navbar links -->
+    <div class="collapse navbar-collapse" id="navbarNav">
+      <!-- Left side -->
+      <ul class="navbar-nav me-auto">
+        <li class="nav-item"><a class="nav-link active" href="#home">Home</a></li>
+        <li class="nav-item"><a class="nav-link" href="#services">Services</a></li>
+        <li class="nav-item"><a class="nav-link" href="#map">Map</a></li>
+      </ul>
+
+      <!-- Right side (Profile) -->
+      <ul class="navbar-nav ms-auto">
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" id="profileDropdown" role="button" data-bs-toggle="dropdown">
+            <img src="https://img.icons8.com/color/48/user-male-circle--v1.png" 
+                 alt="Profile" class="rounded-circle me-2" width="35" height="35">
+            <span class="d-none d-sm-inline">Rakesh</span>
+          </a>
+          <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="profileDropdown">
+            <li><a class="dropdown-item" href="contact.html">👤 Profile</a></li>
+            <li><a class="dropdown-item" href="settings.html">⚙️ Settings</a></li>
+            <li><hr class="dropdown-divider"></li>
+            <li><a class="dropdown-item text-danger" href="index_page.html">🚪 Logout</a></li>
+          </ul>
+        </li>
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<!-- Hero Section -->
+  <section id="home" class="hero text-box">
+    <div class="container text-dark text-box m-auto">
+      <h1 class="fw-bold mb-4">Search Your Bus</h1>
+      <p class="lead">Safe • Fast • Comfortable</p>
+      <div class="search-box p-4 bg-light rounded shadow">
+      <div class="search-box bg-white text-dark p-4 rounded shadow-lg search-container">
+        <form>
+          <div class="row g-3">
+            <div class="col-md-4">
+              <input type="text" class="form-control" placeholder="Leaving From" required>
+            </div>
+            <div class="col-md-4">
+              <input type="text" class="form-control" placeholder="Going To" required>
+            </div>
+            <div class="col-md-4">
+              <button type="submit" class="btn btn-danger w-100">Search Buses</button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- Our Services -->
+  <section class="py-5" id="services">
+    <div class="container">
+      <h3 class="text-center mb-4">Our Services</h3>
+      <div class="row g-4 text-center">
+        <!-- cards (kept same order as in your file) -->
+        <!-- 1 -->
+        <div class="col-md-3 col-sm-6">
+          <a href="booking.html" class="text-decoration-none text-dark">
+            <div class="card h-100 shadow-sm p-3">
+              <img src="https://img.icons8.com/ios-filled/100/ticket.png" class="mx-auto mb-2" alt="">
+              <h6>Online Ticket Booking</h6>
+            </div>
+          </a>
+        </div>
+        <!-- 2 -->
+        <div class="col-md-3 col-sm-6">
+          <a href="cancle.html" class="text-decoration-none text-dark">
+            <div class="card h-100 shadow-sm p-3">
+              <img src="https://img.icons8.com/ios-filled/100/cancel.png" class="mx-auto mb-2" alt="">
+              <h6>Cancel / Modify Ticket</h6>
+            </div>
+          </a>
+        </div>
+        <!-- 3 -->
+        <div class="col-md-3 col-sm-6">
+          <a href="buspass.html" class="text-decoration-none text-dark">
+            <div class="card h-100 shadow-sm p-3">
+              <img src="https://img.icons8.com/ios-filled/100/id-verified.png" class="mx-auto mb-2" alt="">
+              <h6>Bus Pass Services</h6>
+            </div>
+          </a>
+        </div>
+        <!-- 4 -->
+        <div class="col-md-3 col-sm-6">
+          <a href="timetable.html" class="text-decoration-none text-dark">
+            <div class="card h-100 shadow-sm p-3">
+              <img src="https://img.icons8.com/ios-filled/100/calendar.png" class="mx-auto mb-2" alt="">
+              <h6>Bus Timetable</h6>
+            </div>
+          </a>
+        </div>
+
+        <!-- 5 -->
+        <div class="col-md-3 col-sm-6">
+          <a href="tracking.html" class="text-decoration-none text-dark">
+            <div class="card h-100 shadow-sm p-3">
+              <img src="https://img.icons8.com/ios-filled/100/marker.png" class="mx-auto mb-2" alt="">
+              <h6>Live Bus Tracking</h6>
+            </div>
+          </a>
+        </div>
+
+        <!-- 6 -->
+        <div class="col-md-3 col-sm-6">
+          <a href="feedback.html" class="text-decoration-none text-dark">
+            <div class="card h-100 shadow-sm p-3">
+              <img src="https://img.icons8.com/ios-filled/100/feedback.png" class="mx-auto mb-2" alt="">
+              <h6>Feedback / Complaints</h6>
+            </div>
+          </a>
+        </div>
+
+        <!-- 7 -->
+        <div class="col-md-3 col-sm-6">
+          <a href="offers.html" class="text-decoration-none text-dark">
+            <div class="card h-100 shadow-sm p-3">
+              <img src="https://img.icons8.com/ios-filled/100/discount.png" class="mx-auto mb-2" alt="">
+              <h6>Offers & Discounts</h6>
+            </div>
+          </a>
+        </div>
+
+        <!-- 8 -->
+        <div class="col-md-3 col-sm-6">
+          <a href="lostfound.html" class="text-decoration-none text-dark">
+            <div class="card h-100 shadow-sm p-3">
+              <img src="https://img.icons8.com/ios-filled/100/search-property.png" class="mx-auto mb-2" alt="">
+              <h6>Lost & Found</h6>
+            </div>
+          </a>
+        </div>
+
+        <!-- 9 -->
+        <div class="col-md-3 col-sm-6">
+          <a href="ivr.html" class="text-decoration-none text-dark">
+            <div class="card h-100 shadow-sm p-3">
+              <img src="https://img.icons8.com/ios-filled/100/phone.png" class="mx-auto mb-2" alt="">
+              <h6>IVR</h6>
+            </div>
+          </a>
+        </div>
+
+        <!-- 10 -->
+        <div class="col-md-3 col-sm-6">
+          <a href="sms.html" class="text-decoration-none text-dark">
+            <div class="card h-100 shadow-sm p-3">
+              <img src="https://img.icons8.com/ios-filled/100/alarm.png" class="mx-auto mb-2" alt="">
+              <h6>SMS</h6>
+            </div>
+          </a>
+        </div>
+
+        <!-- 11 -->
+        <div class="col-md-3 col-sm-6">
+          <a href="tourist.html" class="text-decoration-none text-dark">
+            <div class="card h-100 shadow-sm p-3">
+              <img src="https://img.icons8.com/ios-filled/100/beach.png" class="mx-auto mb-2" alt="">
+              <h6>Tourist Packages</h6>
+            </div>
+          </a>
+        </div>
+
+        <!-- 12 -->
+        <div class="col-md-3 col-sm-6">
+          <a href="rental.html" class="text-decoration-none text-dark">
+            <div class="card h-100 shadow-sm p-3">
+              <img src="https://img.icons8.com/ios-filled/100/bus.png" class="mx-auto mb-2" alt="">
+              <h6>Rental Buses</h6>
+            </div>
+          </a>
+        </div>
+
+        <!-- 13 -->
+        <div class="col-md-3 col-sm-6">
+          <a href="parcel.html" class="text-decoration-none text-dark">
+            <div class="card h-100 shadow-sm p-3">
+              <img src="https://img.icons8.com/ios-filled/100/student.png" class="mx-auto mb-2" alt="">
+              <h6>Parcel & Courier Services</h6>
+            </div>
+          </a>
+        </div>
+
+        <!-- 14 -->
+        <div class="col-md-3 col-sm-6">
+          <a href="senior.html" class="text-decoration-none text-dark">
+            <div class="card h-100 shadow-sm p-3">
+              <img src="https://img.icons8.com/ios-filled/100/elderly-person.png" class="mx-auto mb-2" alt="">
+              <h6>Senior Citizen Support</h6>
+            </div>
+          </a>
+        </div>
+
+        <!-- 15 -->
+        <div class="col-md-3 col-sm-6">
+          <a href="nearStop.html" class="text-decoration-none text-dark">
+            <div class="card h-100 shadow-sm p-3">
+              <img src="https://img.icons8.com/ios-filled/100/road.png" class="mx-auto mb-2" alt="">
+              <h6>Nearest Bus Stand Info</h6>
+            </div>
+          </a>
+        </div>
+
+        <!-- 16 -->
+        <div class="col-md-3 col-sm-6">
+          <a href="emergency.html" class="text-decoration-none text-dark">
+            <div class="card h-100 shadow-sm p-3">
+              <img src="https://img.icons8.com/ios-filled/100/sos.png" class="mx-auto mb-2" alt="">
+              <h6>Emergency Assistance</h6>
+            </div>
+          </a>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- Map Section (REPLACED: interactive passenger + nearby buses) -->
+  <section id="mapSection" class="py-5 bg-light">
+    <div class="container">
+      <h3 class="mb-4 text-center">Our Service Locations — Passenger & Nearby Buses</h3>
+
+      <div class="map-card">
+        <div id="map" aria-label="Live map showing passenger and nearby buses"></div>
+
+        <!-- route / list panel -->
+        <div class="route-info">
+          <div class="nearby-list" id="nearbyList">
+            <h5 class="text-danger">🚌 Nearby Buses</h5>
+            <div id="busCards" class="mt-2"></div>
+          </div>
+
+          <div class="map-actions">
+            <div class="mb-2">
+              <button id="centerBtn" class="btn btn-outline-danger w-100">Center to Me</button>
+            </div>
+            <div class="mb-2">
+              <button id="refreshBtn" class="btn btn-danger w-100">Refresh Nearby</button>
+            </div>
+            <div class="info-panel p-2" id="selectedInfo">
+              <h6 class="mb-1">Selected</h6>
+              <p id="selTitle" class="mb-0 text-muted">No bus selected</p>
+              <small id="selDetails" class="text-muted"></small>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer id="contact" class="bg-danger text-white text-center py-3">
+    <p class="mb-0">© 2025 BusBooking. All Rights Reserved.</p>
+  </footer>
+
+  <!-- Loading Spinner -->
+  <div id="loadingSpinner" class="loading-overlay d-none">
+    <div class="spinner-border text-danger" role="status">
+      <span class="visually-hidden">Loading...</span>
+    </div>
+  </div>
+
+  <!-- Toast Notification -->
+  <div class="position-fixed bottom-0 end-0 p-3" style="z-index: 3000">
+    <div id="liveToast" class="toast align-items-center text-bg-success border-0" role="alert">
+      <div class="d-flex">
+        <div class="toast-body">
+          ✅ Showing nearby buses...
+        </div>
+        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts: Bootstrap, Leaflet, Routing -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet-routing-machine/dist/leaflet-routing-machine.min.js"></script>
+
+  <script>
+  // ---------- UTILS ----------
+  function haversineDistance([lat1,lon1],[lat2,lon2]){
+    // returns km
+    const toRad = v => v * Math.PI/180;
+    const R = 6371; // km
+    const dLat = toRad(lat2-lat1);
+    const dLon = toRad(lon2-lon1);
+    const a = Math.sin(dLat/2)**2 + Math.cos(toRad(lat1))*Math.cos(toRad(lat2))*Math.sin(dLon/2)**2;
+    const c = 2*Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    return R*c;
+  }
+
+  // small helper to create element
+  function el(tag, cls, txt){ const e=document.createElement(tag); if(cls) e.className=cls; if(txt) e.innerText=txt; return e; }
+
+  // ---------- MAP & DATA ----------
+  const map = L.map('map', { zoomControl: true }).setView([30.9,75.85], 8);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
+
+  // emoji icons via divIcon
+  const passengerIcon = L.divIcon({ html: '🧍', className: 'emoji-marker', iconSize: [30,30], iconAnchor: [15,30] });
+  const busIcon = type => L.divIcon({ html: '🚌', className: 'emoji-marker', iconSize: [26,26], iconAnchor: [13,26] });
+
+  // demo bus fleet around Punjab (lat,lng,number,type,speed_kmph)
+  // speeds approximate by service type
+  const fleet = [
+    { id: 'PB101', name: 'Express 101', lat: 31.63, lng: 74.87, type: 'Express', speed: 60 },
+    { id: 'PB102', name: 'Superfast 202', lat: 31.33, lng: 75.58, type: 'Superfast', speed: 70 },
+    { id: 'PB103', name: 'Local 303', lat: 30.90, lng: 75.86, type: 'Local', speed: 30 },
+    { id: 'PB104', name: 'Deluxe 404', lat: 30.48, lng: 76.59, type: 'Deluxe', speed: 55 },
+    { id: 'PB105', name: 'Pallevelugu 505', lat: 30.21, lng: 74.95, type: 'Pallevelugu', speed: 35 },
+    { id: 'PB106', name: 'Express 606', lat: 30.73, lng: 76.77, type: 'Express', speed: 60 },
+    { id: 'PB107', name: 'Local 707', lat: 31.32, lng: 75.58, type: 'Local', speed: 28 },
+    { id: 'PB108', name: 'Superfast 808', lat: 30.34, lng: 76.39, type: 'Superfast', speed: 68 },
+    { id: 'PB109', name: 'Deluxe 909', lat: 30.82, lng: 75.17, type: 'Deluxe', speed: 50 },
+    { id: 'PB110', name: 'Express 111', lat: 30.21, lng: 74.95, type: 'Express', speed: 60 },
+    { id: 'PB111', name: 'Local 121', lat: 30.67, lng: 74.62, type: 'Local', speed: 30 },
+    { id: 'PB112', name: 'Superfast 131', lat: 31.32, lng: 75.61, type: 'Superfast', speed: 70 },
+    { id: 'PB113', name: 'Express 141', lat: 30.9,  lng: 75.5,  type: 'Express', speed: 60 },
+    { id: 'PB114', name: 'Local 151', lat: 30.78, lng: 75.47, type: 'Local', speed: 32 },
+    { id: 'PB115', name: 'Pallevelugu 161', lat: 31.95, lng: 75.62, type: 'Pallevelugu', speed: 34 },
+    { id: 'PB116', name: 'Deluxe 171', lat: 30.67, lng: 76.73, type: 'Deluxe', speed: 55 }
+  ];
+
+  // markers for buses
+  const busMarkers = new Map();
+
+  function placeFleet(){
+    fleet.forEach(b => {
+      const m = L.marker([b.lat,b.lng], { icon: busIcon(b.type) }).addTo(map);
+      m.bindPopup(`<b>${b.name}</b><br>Type: ${b.type}`);
+      m.on('click', ()=> selectBus(b));
+      busMarkers.set(b.id, m);
+    });
+  }
+
+  // move fleet slightly to simulate movement (small demo animation)
+  function animateFleet(){
+    fleet.forEach(b => {
+      // random tiny jitter to simulate movement
+      const jitter = 0.0005 * (Math.random() - 0.5);
+      b.lat += jitter;
+      b.lng += jitter;
+      const m = busMarkers.get(b.id);
+      if(m) m.setLatLng([b.lat,b.lng]);
+    });
+  }
+
+  // run animation every 3s
+  setInterval(animateFleet, 3000);
+
+  placeFleet();
+
+  // passenger marker & watch position
+  let passengerMarker = null;
+  let passengerLatLng = null;
+  let routingControl = null;
+
+  function onLocationError(msg){
+    console.warn(msg);
+    document.getElementById('busCards').innerHTML = '<div class="text-muted">Geolocation not available. Please allow location or open over https / localhost.</div>';
+  }
+
+  // update nearby list sorted by distance & compute ETA
+  function updateNearby(){
+    if(!passengerLatLng) return;
+    const list = fleet.map(b => {
+      const d = haversineDistance([passengerLatLng.lat,passengerLatLng.lng],[b.lat,b.lng]); // km
+      const etaMin = Math.max(1, Math.round((d / b.speed) * 60)); // minutes
+      return { ...b, distance: d, eta: etaMin };
+    }).sort((a,b)=>a.distance - b.distance);
+
+    const container = document.getElementById('busCards');
+    container.innerHTML = '';
+    list.forEach(item => {
+      const card = el('div','card p-2 bus-card');
+      const head = el('div','d-flex justify-content-between align-items-start');
+      const left = el('div','');
+      left.appendChild(el('div','fw-bold', item.name));
+      left.appendChild(el('div','text-muted small', `${item.type} • ${item.distance.toFixed(2)} km away`));
+      const right = el('div','text-end');
+      right.appendChild(el('div','fw-semibold text-danger', `${item.eta} min`));
+      head.appendChild(left); head.appendChild(right);
+      card.appendChild(head);
+
+      // action row
+      const actions = el('div','mt-2 d-flex gap-2');
+      const btnRoute = el('button','btn btn-sm btn-outline-danger','Show Route');
+      btnRoute.addEventListener('click', ()=> {
+        // draw route from passenger to this bus
+        drawRouteTo([item.lat,item.lng], item);
+      });
+      const btnFocus = el('button','btn btn-sm btn-danger','Focus');
+      btnFocus.addEventListener('click', ()=> map.setView([item.lat,item.lng], 13));
+      actions.appendChild(btnRoute); actions.appendChild(btnFocus);
+      card.appendChild(actions);
+
+      container.appendChild(card);
+    });
+
+    // show toast
+    const toastEl = document.getElementById('liveToast');
+    const toast = bootstrap.Toast.getOrCreateInstance(toastEl);
+    toast.show();
+  }
+
+  function selectBus(bus){
+    document.getElementById('selTitle').innerText = bus.name;
+    document.getElementById('selDetails').innerText = `${bus.type} — Last known location: ${bus.lat.toFixed(4)}, ${bus.lng.toFixed(4)}`;
+  }
+
+  // draw route from passenger to targetCoord
+  function drawRouteTo(targetCoord, bus){
+    if(!passengerLatLng){
+      alert('Passenger location not available. Please allow location access.');
+      return;
+    }
+    if(routingControl) map.removeControl(routingControl);
+    routingControl = L.Routing.control({
+      waypoints: [
+        L.latLng(passengerLatLng.lat, passengerLatLng.lng),
+        L.latLng(targetCoord[0], targetCoord[1])
+      ],
+      createMarker: () => null,
+      routeWhileDragging: false,
+      showAlternatives: false
+    }).on('routesfound', function(e){
+      const r = e.routes[0];
+      const distanceKm = (r.summary.totalDistance/1000).toFixed(2);
+      const timeMin = Math.round(r.summary.totalTime/60);
+      // show in selected panel
+      document.getElementById('selTitle').innerText = bus.name;
+      document.getElementById('selDetails').innerText = `${bus.type} — Distance: ${distanceKm} km • ETA: ${timeMin} min`;
+    }).addTo(map);
+  }
+
+  // center to passenger
+  document.getElementById('centerBtn').addEventListener('click', ()=>{
+    if(passengerLatLng) map.setView([passengerLatLng.lat, passengerLatLng.lng], 14);
+  });
+  document.getElementById('refreshBtn').addEventListener('click', updateNearby);
+
+  // watchPosition to track passenger live
+  if(navigator.geolocation){
+    const watchId = navigator.geolocation.watchPosition(pos => {
+      const lat = pos.coords.latitude;
+      const lng = pos.coords.longitude;
+      passengerLatLng = { lat, lng };
+
+      if(!passengerMarker){
+        passengerMarker = L.marker([lat,lng], { icon: passengerIcon }).addTo(map).bindPopup('📍 You (Passenger)').openPopup();
+        map.setView([lat,lng], 13);
+      } else {
+        passengerMarker.setLatLng([lat,lng]);
+      }
+
+      updateNearby();
+    }, err => {
+      onLocationError(err.message || 'Location error');
+    }, { enableHighAccuracy: true, maximumAge: 2000, timeout: 10000 });
+  } else {
+    onLocationError('Geolocation not supported');
+  }
+
+  // initial select panel reset
+  document.getElementById('selTitle').innerText = 'No bus selected';
+  document.getElementById('selDetails').innerText = '';
+
+  // initial run: update nearby even if passenger not yet (it will be empty)
+  updateNearby();
+
+  // accessible transition: expose drawRouteTo globally for clicking marker buttons if needed
+  window.drawRouteTo = drawRouteTo;
+  window.selectBus = selectBus;
+
+  // hide/show spinner helpers (left in case you want to call during heavy ops)
+  function showSpinner(){ document.getElementById('loadingSpinner').classList.remove('d-none'); }
+  function hideSpinner(){ document.getElementById('loadingSpinner').classList.add('d-none'); }
+
+  </script>
+
+</body>
+</html>

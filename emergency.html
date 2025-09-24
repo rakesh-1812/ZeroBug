@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Emergency Assistance - PSRTC</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+
+  <style>
+    body {
+      font-family: "Segoe UI", sans-serif;
+      margin-top: 70px;
+    }
+
+    .hero-section {
+      height: 60vh;
+      background: linear-gradient(rgba(0,0,0,0.7), rgba(0,0,0,0.7)),
+                  url('https://images.unsplash.com/photo-1516110833967-5781f1c7e64e') center/cover no-repeat;
+      color: white;
+    }
+
+    .quick-call button {
+      width: 100%;
+      font-size: 18px;
+      padding: 15px;
+    }
+
+    .emergency-form {
+      background: #fff;
+      padding: 25px;
+      border-radius: 10px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    }
+
+    footer {
+      background: #dc3545;
+      color: white;
+    }
+  </style>
+</head>
+<body>
+  <!-- Navbar -->
+  <nav class="navbar navbar-expand-lg navbar-dark bg-danger fixed-top">
+    <div class="container">
+      <a class="navbar-brand fw-bold" href="index.html">
+        <img src="unnamed-removebg-preview.png" alt="PSRTC Logo" width="150"  class="me-2">
+      </a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse" id="navbarNav">
+        <ul class="navbar-nav ms-auto">
+          <li class="nav-item"><a class="nav-link" href="index.html">Home</a></li>
+          <li class="nav-item"><a class="nav-link active" href="#">Emergency Assistance</a></li>
+          <li class="nav-item"><a class="nav-link" href="#">Profile</a></li>
+        </ul>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Hero -->
+  <section class="hero-section text-center d-flex align-items-center">
+    <div class="container">
+      <h1 class="fw-bold">Emergency Assistance</h1>
+      <p class="lead">We are here to help you 24/7 in case of emergencies</p>
+    </div>
+  </section>
+
+  <!-- Quick Call Buttons -->
+  <section class="container py-5">
+    <h2 class="text-center mb-4">Quick Emergency Contacts</h2>
+    <div class="row g-4 quick-call">
+      <div class="col-md-4 col-sm-6">
+        <button class="btn btn-danger shadow" onclick="makeCall('100')">🚨 Police - 100</button>
+      </div>
+      <div class="col-md-4 col-sm-6">
+        <button class="btn btn-success shadow" onclick="makeCall('108')">🚑 Ambulance - 108</button>
+      </div>
+      <div class="col-md-4 col-sm-6">
+        <button class="btn btn-primary shadow" onclick="makeCall('1800123456')">🚌 PSRTC Helpline</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Emergency Form -->
+  <section class="bg-light py-5">
+    <div class="container">
+      <h2 class="text-center mb-4">Report an Emergency</h2>
+      <div class="emergency-form mx-auto" style="max-width:600px;">
+        <form id="emergencyForm">
+          <div class="mb-3">
+            <label class="form-label">Your Name</label>
+            <input type="text" class="form-control" placeholder="Enter your name" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Phone Number</label>
+            <input type="tel" class="form-control" placeholder="Enter your phone number" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Location</label>
+            <input type="text" class="form-control" placeholder="Enter your current location" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Emergency Type</label>
+            <select class="form-select" required>
+              <option value="">-- Select --</option>
+              <option>Medical Emergency</option>
+              <option>Accident</option>
+              <option>Bus Breakdown</option>
+              <option>Other</option>
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Description</label>
+            <textarea class="form-control" rows="4" placeholder="Briefly describe the issue"></textarea>
+          </div>
+          <button type="submit" class="btn btn-danger w-100">🚨 Submit Report</button>
+        </form>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="text-center py-3">
+    <p class="mb-0">© 2025 PSRTC | Emergency Assistance</p>
+  </footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+  <script>
+    function makeCall(number) {
+      window.location.href = `tel:${number}`;
+    }
+
+    document.getElementById("emergencyForm").addEventListener("submit", function(e) {
+      e.preventDefault();
+      alert("🚨 Your emergency has been reported. Help is on the way!");
+      this.reset();
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Punjab Bus Timetable</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body { background: #fff5f5; }
+    .navbar { background: #b71c1c !important; }
+    .highlight { background-color: #ffebee !important; font-weight: bold; }
+    .table thead { background-color: #d32f2f; color: white; }
+  </style>
+</head>
+<body>
+
+  <!-- Navbar -->
+  <nav class="navbar navbar-expand-lg navbar-dark shadow-sm">
+    <div class="container">
+      <a class="navbar-brand fw-bold" href="index.html">← Back to Main</a>
+    </div>
+  </nav>
+
+  <!-- Hero -->
+  <section class="text-center py-5 bg-light">
+    <div class="container">
+      <h2 class="fw-bold text-danger">Punjab Bus Timetable</h2>
+      <p class="lead">Local, Metro, and Inter-State Buses for Tier-2 & Tier-3 Cities</p>
+
+      <!-- Search Form -->
+      <div class="row justify-content-center mt-4">
+        <div class="col-md-3">
+          <input type="text" id="fromCity" class="form-control" placeholder="From City">
+        </div>
+        <div class="col-md-3">
+          <input type="text" id="toCity" class="form-control" placeholder="To City">
+        </div>
+        <div class="col-md-2">
+          <button class="btn btn-danger w-100" onclick="searchBuses()">Search</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Table -->
+  <div class="container py-5">
+    <div class="table-responsive">
+      <table class="table table-bordered text-center" id="busTable">
+        <thead>
+          <tr>
+            <th>Bus No</th>
+            <th>From</th>
+            <th>To</th>
+            <th>Type</th>
+            <th>Start Time</th>
+            <th>Reach Time</th>
+            <th>Frequency</th>
+          </tr>
+        </thead>
+        <tbody>
+          <!-- Sample buses -->
+          <tr><td>PB101</td><td>Ludhiana</td><td>Jalandhar</td><td>Local</td><td>06:00</td><td>08:00</td><td>Every 30 min</td></tr>
+          <tr><td>PB102</td><td>Ludhiana</td><td>Amritsar</td><td>Express</td><td>07:00</td><td>10:30</td><td>Hourly</td></tr>
+          <tr><td>PB103</td><td>Patiala</td><td>Chandigarh</td><td>Metro</td><td>06:30</td><td>08:00</td><td>Every 20 min</td></tr>
+          <tr><td>PB104</td><td>Ludhiana</td><td>Delhi</td><td>Superfast</td><td>05:00</td><td>11:00</td><td>Daily</td></tr>
+          <tr><td>PB105</td><td>Amritsar</td><td>Pathankot</td><td>Pallevelugu</td><td>09:00</td><td>11:30</td><td>Every 45 min</td></tr>
+          <tr><td>PB106</td><td>Chandigarh</td><td>Shimla</td><td>Deluxe</td><td>06:00</td><td>10:00</td><td>Daily</td></tr>
+          <tr><td>PB107</td><td>Bathinda</td><td>Mansa</td><td>Local</td><td>07:15</td><td>08:45</td><td>Every 1 hr</td></tr>
+          <tr><td>PB108</td><td>Ludhiana</td><td>Phagwara</td><td>Local</td><td>05:30</td><td>06:15</td><td>Every 15 min</td></tr>
+          <tr><td>PB109</td><td>Amritsar</td><td>Delhi</td><td>Express</td><td>08:00</td><td>14:00</td><td>Daily</td></tr>
+          <tr><td>PB110</td><td>Chandigarh</td><td>Jalandhar</td><td>Superfast</td><td>07:45</td><td>10:15</td><td>Daily</td></tr>
+          <tr><td>PB111</td><td>Ludhiana</td><td>Mumbai</td><td>Inter-State</td><td>04:30</td><td>22:30</td><td>Weekly</td></tr>
+          <tr><td>PB112</td><td>Patiala</td><td>Jaipur</td><td>Inter-State</td><td>06:00</td><td>15:00</td><td>Weekly</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div class="position-fixed bottom-0 end-0 p-3" style="z-index: 3000">
+    <div id="liveToast" class="toast text-bg-danger" role="alert">
+      <div class="d-flex">
+        <div class="toast-body">ℹ️ Enter From & To cities to filter buses</div>
+        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    function searchBuses() {
+      const from = document.getElementById("fromCity").value.toLowerCase();
+      const to = document.getElementById("toCity").value.toLowerCase();
+      const rows = document.querySelectorAll("#busTable tbody tr");
+      let found = false;
+
+      rows.forEach(row => {
+        const fromCity = row.cells[1].innerText.toLowerCase();
+        const toCity = row.cells[2].innerText.toLowerCase();
+        if ((from && fromCity.includes(from)) || (to && toCity.includes(to))) {
+          row.classList.add("highlight");
+          found = true;
+        } else {
+          row.classList.remove("highlight");
+        }
+      });
+
+      if (!found) {
+        const toast = new bootstrap.Toast(document.getElementById("liveToast"));
+        toast.show();
+      }
+    }
+
+    // Show toast on page load
+    window.onload = () => {
+      const toast = new bootstrap.Toast(document.getElementById("liveToast"));
+      toast.show();
+    };
+  </script>
+</body>
+</html>

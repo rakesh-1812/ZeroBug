@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PSRTC Rental Buses</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body { font-family: Arial, sans-serif; background-color: #f8f9fa; }
+    .navbar-brand img { height: 50px; }
+    .hero {
+      background-color: #c20707df;
+      color: #fff;
+      text-align: center;
+      padding: 80px 20px;
+    }
+    .hero h1 { font-size: 3rem; font-weight: bold; }
+    .section-title { font-weight: bold; margin-bottom: 30px; text-align: center; }
+    .bus-card img { max-width: 100%; height: 180px; object-fit: cover; border-radius: 8px; }
+    .bus-card h5 { font-weight: bold; margin-top: 10px; }
+    .bus-card p { font-size: 0.9rem; }
+    .carousel-item img { height: 300px; object-fit: cover; border-radius: 8px; }
+  </style>
+</head>
+<body>
+
+<!-- Navbar -->
+<nav class="navbar navbar-expand-lg navbar-dark bg-danger fixed-top shadow-sm">
+  <div class="container">
+    <a class="navbar-brand" href="#">
+      <img src="unnamed-removebg-preview.png" alt="PSRTC Logo">
+    </a>
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse" id="navbarNav">
+      <ul class="navbar-nav ms-auto">
+        <li class="nav-item"><a class="nav-link" href="index.html">Home</a></li>
+        <li class="nav-item"><a class="nav-link active" href="#">Rental Buses</a></li>
+        <li class="nav-item"><a class="nav-link" href="contact.html">Profile</a></li>
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<!-- Hero Section -->
+<section class="hero pt-5">
+  <div class="container pt-5">
+    <h1>PSRTC Rental Buses</h1>
+    <p class="lead">Book PSRTC buses for events, tours, and private trips with comfort and safety.</p>
+  </div>
+</section>
+
+<!-- Carousel Section -->
+<section class="py-5">
+  <div class="container">
+    <h2 class="section-title">Explore Our Buses</h2>
+    <div id="busCarousel" class="carousel slide" data-bs-ride="carousel">
+      <div class="carousel-inner">
+
+        <div class="carousel-item active">
+          <img src="https://www.tribuneindia.com/sortd-service/imaginary/v22-01/jpg/large/high?url=dGhldHJpYnVuZS1zb3J0ZC1wcm8tcHJvZC1zb3J0ZC9tZWRpYWFlZTkyN2UwLTRlODQtMTFlZi05NmNkLTAzMWE4OWU3OWU1ZC5qcGc=" class="d-block w-100" alt="Mini Bus">
+          <div class="carousel-caption d-none d-md-block">
+            <h5>Mini Bus</h5>
+            <p>Ideal for small groups (10-20 passengers).</p>
+          </div>
+        </div>
+
+        <div class="carousel-item">
+          <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS7fHR3TtUG_kGLyhxOftL4irGFY2ry-Zw9QrmRxOfj7wtbvqn9YleAA7tINdGYP6D3c3Y&usqp=CAU" class="d-block w-100" alt="Standard Bus">
+          <div class="carousel-caption d-none d-md-block">
+            <h5>Standard Bus</h5>
+            <p>Comfortable buses for medium groups (20-40 passengers).</p>
+          </div>
+        </div>
+
+        <div class="carousel-item">
+          <img src="https://bsmedia.business-standard.com/_media/bs/img/article/2022-08/04/full/1659584735-1354.jpg?im=FeatureCrop,size=(826,465)" class="d-block w-100" alt="Luxury Bus">
+          <div class="carousel-caption d-none d-md-block">
+            <h5>Luxury / Volvo Bus</h5>
+            <p>Premium buses with AC, recliner seats, and entertainment (40+ passengers).</p>
+          </div>
+        </div>
+
+        <div class="carousel-item">
+          <img src="https://www.electrive.com/media/2025/03/guwahati-takes-the-green-route-with-100-tata-motors-electric-buses-lowres-cropped.jpeg" class="d-block w-100" alt="School Bus">
+          <div class="carousel-caption d-none d-md-block">
+            <h5>School / College Bus</h5>
+            <p>Safe and reliable buses for student groups for trips and events.</p>
+          </div>
+        </div>
+
+      </div>
+      <button class="carousel-control-prev" type="button" data-bs-target="#busCarousel" data-bs-slide="prev">
+        <span class="carousel-control-prev-icon"></span>
+        <span class="visually-hidden">Previous</span>
+      </button>
+      <button class="carousel-control-next" type="button" data-bs-target="#busCarousel" data-bs-slide="next">
+        <span class="carousel-control-next-icon"></span>
+        <span class="visually-hidden">Next</span>
+      </button>
+    </div>
+  </div>
+</section>
+
+<!-- Bus Types Grid -->
+<section class="py-5 bg-light">
+  <div class="container">
+    <h2 class="section-title">Bus Types & Features</h2>
+    <div class="row g-4">
+
+      <!-- Mini Bus -->
+      <div class="col-md-4 col-sm-6">
+        <div class="card bus-card shadow-sm p-3">
+          <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/f/f3/PSRTC_Bus_in_India.jpg/640px-PSRTC_Bus_in_India.jpg" alt="Mini Bus">
+          <h5>Mini Bus</h5>
+          <p>Small groups, city tours, short trips. Seats: 10-20</p>
+        </div>
+      </div>
+
+      <!-- Standard Bus -->
+      <div class="col-md-4 col-sm-6">
+        <div class="card bus-card shadow-sm p-3">
+          <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/1/1b/PSRTC_Luxury_Bus.jpg/640px-PSRTC_Luxury_Bus.jpg" alt="Standard Bus">
+          <h5>Standard Bus</h5>
+          <p>Medium groups, intercity travel. Seats: 20-40</p>
+        </div>
+      </div>
+
+      <!-- Luxury / Volvo Bus -->
+      <div class="col-md-4 col-sm-6">
+        <div class="card bus-card shadow-sm p-3">
+          <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/c/c2/Volvo_Bus_Picture.jpg/640px-Volvo_Bus_Picture.jpg" alt="Luxury Bus">
+          <h5>Luxury / Volvo Bus</h5>
+          <p>Premium buses with AC, recliner seats, and entertainment. Seats: 40+</p>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- Booking Section -->
+<section class="py-5 text-center">
+  <div class="container">
+    <h2 class="section-title">Book Your Rental Bus</h2>
+    <p>Contact us to book PSRTC buses for your events, trips, and tours.</p>
+    <a href="contact.html" class="btn btn-danger btn-lg mt-3">Book Now</a>
+  </div>
+</section>
+
+<!-- Footer -->
+<footer class="bg-danger text-white text-center py-3">
+  <p class="mb-0">© 2025 PSRTC. All Rights Reserved.</p>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

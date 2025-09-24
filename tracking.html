@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Punjab Live Bus Tracking — Full Demo</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <!-- Bootstrap -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Leaflet -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+  <style>
+    :root{
+      --brand-red: #c62828;
+      --bg: #fbfbfb;
+    }
+    body { margin:0; font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial; background:var(--bg); }
+    .topbar { background:var(--brand-red); color:#fff; padding:0.5rem 1rem; position:sticky; top:0; z-index:1100; }
+    .topbar .brand { font-weight:700; letter-spacing:0.2px; }
+    #map { height: calc(100vh - 130px); border-radius:8px; box-shadow:0 6px 18px rgba(0,0,0,0.12); }
+    .controls { padding: 0.75rem; background:#fff; border-radius:8px; box-shadow:0 6px 18px rgba(0,0,0,0.08); }
+    .search-box { position: relative; z-index: 1200; margin-top:0.6rem; }
+    .legend { background: #fff; padding:8px; border-radius:6px; box-shadow:0 3px 8px rgba(0,0,0,0.08); }
+    .datalist-suggestion{ max-height:200px; overflow:auto; }
+    .bus-popup { font-size:0.9rem; }
+    .route-label { font-weight:700; color: var(--brand-red); }
+    .btn-reset { background:#c62828; color:#fff; }
+    /* small screen tweaks */
+    @media (max-width: 767px){
+      #map { height: calc(100vh - 210px); }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="topbar d-flex align-items-center justify-content-between">
+    <div class="brand d-flex align-items-center gap-2">
+      <div class="logo-image">
+      <img src="unnamed-removebg-preview.png" alt="bus" style="width: 150px;
+  height: auto;
+  margin: 10px 0; 
+  border-radius: 5px;
+  display: block;"/></div>
+      <span>Punjab Live Bus Tracking (PRTC Demo)</span>
+    </div>
+    <div>
+      <button id="resetBtn" class="btn btn-reset btn-sm">Reset All Routes</button>
+      <a href="index.html" class="btn btn-light btn-sm ms-2">Back to Main</a>
+    </div>
+  </div>
+
+  <div class="container-fluid p-3">
+    <div class="row g-3">
+
+      <!-- Left controls -->
+      <div class="col-xl-3 col-lg-4">
+        <div class="controls">
+          <h6 class="mb-2">Search Route</h6>
+
+          <form id="searchForm" class="row g-2">
+            <div class="col-12">
+              <label class="form-label small mb-1">Leaving From</label>
+              <input list="stopsList" id="fromInput" class="form-control" placeholder="e.g. Chandigarh" />
+            </div>
+            <div class="col-12">
+              <label class="form-label small mb-1">Going To</label>
+              <input list="stopsList" id="toInput" class="form-control" placeholder="e.g. Amritsar" />
+            </div>
+            <datalist id="stopsList"></datalist>
+
+            <div class="col-6">
+              <button class="btn btn-danger w-100" type="submit">Search</button>
+            </div>
+            <div class="col-6">
+              <button id="showAllBtn" class="btn btn-outline-secondary w-100" type="button">Show All Routes</button>
+            </div>
+          </form>
+
+          <hr />
+
+          <div class="mb-2">
+            <h6 class="small mb-1">Legend (by service)</h6>
+            <div class="d-flex gap-2 align-items-center">
+              <div style="width:18px;height:18px;background:#4caf50;border-radius:4px"></div><small> Local / Pallevelugu (slow)</small>
+            </div>
+            <div class="d-flex gap-2 align-items-center mt-1">
+              <div style="width:18px;height:18px;background:#2196f3;border-radius:4px"></div><small> Express</small>
+            </div>
+            <div class="d-flex gap-2 align-items-center mt-1">
+              <div style="width:18px;height:18px;background:#ff9800;border-radius:4px"></div><small> Superfast</small>
+            </div>
+            <div class="d-flex gap-2 align-items-center mt-1">
+              <div style="width:18px;height:18px;background:#7e57c2;border-radius:4px"></div><small> Deluxe/Volvo (fast)</small>
+            </div>
+          </div>
+
+          <hr />
+
+          <div>
+            <h6 class="small mb-1">Controls</h6>
+            <p class="small text-muted mb-1">Click any bus marker to view live details & ETA. Click a route to view metadata.</p>
+            <button id="pauseBtn" class="btn btn-outline-danger btn-sm">Pause Movement</button>
+            <button id="resumeBtn" class="btn btn-outline-success btn-sm ms-2">Resume</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Map -->
+      <div class="col-xl-9 col-lg-8">
+        <div id="map"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bootstrap + Leaflet scripts -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
+  <script>
+  /********************************************************************
+   Full demo: many routes, moving buses, search that hides others,
+   colored bus icons via DivIcon (fast/slow by service), reverse routes,
+   ETA calculation, start/reach times, reset, pause/resume.
+  ********************************************************************/
+
+  // ---------- Utility helpers ----------
+  function minutesFromString(t){
+    // parse e.g. "6h 30m" or "90m" or "2h"
+    let m=0;
+    const hMatch = t.match(/(\d+)\s*h/);
+    const mMatch = t.match(/(\d+)\s*m/);
+    if(hMatch) m += parseInt(hMatch[1])*60;
+    if(mMatch) m += parseInt(mMatch[1]);
+    if(!hMatch && !mMatch){
+      const n = parseInt(t);
+      if(!isNaN(n)) m = n;
+    }
+    return m || 60;
+  }
+  function pad(n){ return (n<10? '0'+n : ''+n); }
+  function timeAddMinutes(startHHMM, mins){
+    // startHHMM "06:30" or "6:30" -> returns "HH:MM"
+    const parts = startHHMM.split(':'); let H=parseInt(parts[0]), M=parseInt(parts[1]||0);
+    let total = H*60 + M + Math.round(mins);
+    total = total % (24*60);
+    return pad(Math.floor(total/60)) + ':' + pad(total%60);
+  }
+  function parseRouteTimeStringToMinutesString(mins){
+    if(mins>=60){
+      const h = Math.floor(mins/60), m = mins%60;
+      return `${h}h ${m}m`;
+    } else return `${mins}m`;
+  }
+
+  // ---------- Map init ----------
+  const map = L.map('map', {preferCanvas:true}).setView([31.1,75.5], 7);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© OpenStreetMap contributors'
+  }).addTo(map);
+
+  // store everything so we can remove/hide later
+  let routeLines = [];    // {routeId, polyline, stopsMarkers:[], busMarkers:[], timers:[]}
+  let globalTimers = [];  // intervals (for pause/resume)
+  let paused = false;
+
+  // service types & speeds (units: progress per second roughly)
+  const serviceProfiles = {
+    'Local':   { color:'#4caf50', speed: 0.0008 },  // slow
+    'Express': { color:'#2196f3', speed: 0.0016 },
+    'Superfast':{ color:'#ff9800', speed: 0.0024 },
+    'Deluxe':  { color:'#7e57c2', speed: 0.003 }
+  };
+
+  // create colored bus marker using DivIcon with bus emoji
+  function createBusDivIcon(color){
+    return L.divIcon({
+      html: `<div style="
+        width:36px;height:36px;border-radius:8px;
+        display:flex;align-items:center;justify-content:center;
+        background:${color};color:white;font-weight:700;
+        box-shadow:0 2px 6px rgba(0,0,0,0.3);
+      ">🚍</div>`,
+      className: '',
+      iconSize: [36,36],
+      iconAnchor: [18,18],
+      popupAnchor: [0,-18]
+    });
+  }
+
+  // ---------- Routes dataset (22+). Each route has: from,to,coords[], estTime (mins), startTime (HH:MM) ----------
+  // Coordinates are simplified for demo — not exact roads; real app would use precise polylines.
+  const ROUTES = [
+    { id:'R1', from:"Chandigarh", to:"Amritsar",
+      coords:[[30.7333,76.7794],[30.9,76.0],[31.1,75.6],[31.3,75.2],[31.6340,74.8723]],
+      estMin: minutesFromString("6h 0m"), startTime:"06:00" },
+
+    { id:'R2', from:"Ludhiana", to:"Jalandhar",
+      coords:[[30.9010,75.8573],[31.05,75.75],[31.3260,75.5762]],
+      estMin: minutesFromString("2h 15m"), startTime:"07:00" },
+
+    { id:'R3', from:"Patiala", to:"Chandigarh",
+      coords:[[30.3398,76.3869],[30.55,76.57],[30.7333,76.7794]],
+      estMin: minutesFromString("1h 45m"), startTime:"06:30" },
+
+    { id:'R4', from:"Amritsar", to:"Pathankot",
+      coords:[[31.6340,74.8723],[31.95,75.15],[32.2643,75.6421]],
+      estMin: minutesFromString("2h 20m"), startTime:"08:00" },
+
+    { id:'R5', from:"Bathinda", to:"Ludhiana",
+      coords:[[30.2110,74.9455],[30.55,75.3],[30.9010,75.8573]],
+      estMin: minutesFromString("3h 10m"), startTime:"05:30" },
+
+    { id:'R6', from:"Jalandhar", to:"Amritsar",
+      coords:[[31.3260,75.5762],[31.48,75.4],[31.6340,74.8723]],
+      estMin: minutesFromString("1h 40m"), startTime:"09:00" },
+
+    { id:'R7', from:"Mohali", to:"Patiala",
+      coords:[[30.7046,76.7179],[30.6,76.5],[30.3398,76.3869]],
+      estMin: minutesFromString("1h 15m"), startTime:"07:20" },
+
+    { id:'R8', from:"Hoshiarpur", to:"Ludhiana",
+      coords:[[31.5320,75.9176],[31.35,75.8],[30.9010,75.8573]],
+      estMin: minutesFromString("2h 00m"), startTime:"06:45" },
+
+    { id:'R9', from:"Phagwara", to:"Jalandhar",
+      coords:[[31.2200,75.7700],[31.28,75.66],[31.3260,75.5762]],
+      estMin: minutesFromString("40m"), startTime:"08:15" },
+
+    { id:'R10', from:"Ropar", to:"Chandigarh",
+      coords:[[30.968,76.533],[30.85,76.65],[30.7333,76.7794]],
+      estMin: minutesFromString("1h 10m"), startTime:"09:30" },
+
+    { id:'R11', from:"Moga", to:"Ludhiana",
+      coords:[[30.8165,75.1717],[30.85,75.45],[30.9010,75.8573]],
+      estMin: minutesFromString("1h 50m"), startTime:"06:55" },
+
+    { id:'R12', from:"Barnala", to:"Patiala",
+      coords:[[30.374,75.548],[30.45,76.0],[30.3398,76.3869]],
+      estMin: minutesFromString("2h 00m"), startTime:"07:40" },
+
+    { id:'R13', from:"Faridkot", to:"Bathinda",
+      coords:[[30.678,74.75],[30.5,74.9],[30.2110,74.9455]],
+      estMin: minutesFromString("1h 20m"), startTime:"08:10" },
+
+    { id:'R14', from:"Muktsar", to:"Bathinda",
+      coords:[[30.476,74.515],[30.3,74.7],[30.2110,74.9455]],
+      estMin: minutesFromString("1h 00m"), startTime:"05:50" },
+
+    { id:'R15', from:"Abohar", to:"Bathinda",
+      coords:[[30.145,74.20],[30.22,74.5],[30.2110,74.9455]],
+      estMin: minutesFromString("2h 00m"), startTime:"06:10" },
+
+    { id:'R16', from:"Chandigarh", to:"Ludhiana",
+      coords:[[30.7333,76.7794],[30.85,76.4],[30.9010,75.8573]],
+      estMin: minutesFromString("3h 00m"), startTime:"05:45" },
+
+    { id:'R17', from:"Amritsar", to:"Delhi",
+      coords:[[31.6340,74.8723],[30.9,76.0],[29.9,76.9],[28.7041,77.1025]],
+      estMin: minutesFromString("9h 30m"), startTime:"22:00" },
+
+    { id:'R18', from:"Ludhiana", to:"Delhi",
+      coords:[[30.9010,75.8573],[30.0,76.5],[29.9,76.9],[28.7041,77.1025]],
+      estMin: minutesFromString("6h 45m"), startTime:"20:30" },
+
+    { id:'R19', from:"Nawanshahr", to:"Hoshiarpur",
+      coords:[[31.119,76.1],[31.45,76.1],[31.5320,75.9176]],
+      estMin: minutesFromString("1h 40m"), startTime:"07:25" },
+
+    { id:'R20', from:"Sangrur", to:"Patiala",
+      coords:[[30.245,75.8],[30.3,76.0],[30.3398,76.3869]],
+      estMin: minutesFromString("1h 50m"), startTime:"06:55" },
+
+    { id:'R21', from:"Rajpura", to:"Nawanshahr",
+      coords:[[30.48,76.48],[30.9,76.3],[31.119,76.1]],
+      estMin: minutesFromString("2h 10m"), startTime:"09:10" },
+
+    { id:'R22', from:"Malerkotla", to:"Sangrur",
+      coords:[[30.525,75.88],[30.245,75.8]],
+      estMin: minutesFromString("40m"), startTime:"11:00" }
+  ];
+
+  // Build suggestions list for datalist
+  const stopsSet = new Set();
+  ROUTES.forEach(r=> { stopsSet.add(r.from); stopsSet.add(r.to); r.coords.forEach((c,i)=>{}); });
+  // add some sub-stops names derived from routes to suggestions
+  ['Rajpura','Nawanshahr','Malerkotla','Muktsar','Ferozepur','Sangrur','Phagwara','Moga','Faridkot','Abohar'].forEach(s=>stopsSet.add(s));
+  const stopsArray = Array.from(stopsSet).sort();
+
+  // populate datalist
+  const datalist = document.getElementById('stopsList');
+  stopsArray.forEach(s => {
+    const opt = document.createElement('option'); opt.value = s; datalist.appendChild(opt);
+  });
+
+  // ---------- Functions to add & animate routes ----------
+  function createRouteLine(route){
+    const line = L.polyline(route.coords, { color: '#c62828', weight: 3, opacity: 0.7 }).addTo(map);
+    // store meta on line
+    line.routeId = route.id;
+    line.bindPopup(`<div class="route-label">${route.from} → ${route.to}</div>
+      <div>Estimated: ${parseRouteTimeStringToMinutesString(route.estMin)}</div>
+      <div>Start time: ${route.startTime}</div>`);
+    return line;
+  }
+
+  function createStopMarker(latlng, label){
+    return L.circleMarker(latlng, {radius:6, fill:true, fillColor:'#fff', color:'#c62828', weight:1}).bindPopup(`<b>${label}</b>`);
+  }
+
+  // add N buses per route; service types rotate
+  const serviceTypesCycle = ['Local','Express','Superfast','Deluxe'];
+
+  function spawnBusesForRoute(route, routeRecord, busesCount=3){
+    // routeRecord will keep arrays to clear later
+    for(let i=0;i<busesCount;i++){
+      // choose service type cyclically (and alternate reverse direction by marker title)
+      const serviceType = serviceTypesCycle[(i + routeIndexSeed(route.id)) % serviceTypesCycle.length];
+      const color = serviceProfiles[serviceType].color;
+      const icon = createBusDivIcon(color);
+
+      // create marker at start (we will animate)
+      const marker = L.marker(route.coords[0], { icon }).addTo(map);
+      const busId = `${route.id}-BUS-${i+1}`;
+
+      marker.bindPopup(createBusPopupHtml({ busId, route, serviceType, startTime:route.startTime, estMin:route.estMin }));
+
+      // create a bus object to animate
+      const bus = {
+        id: busId,
+        marker,
+        routeCoords: route.coords,
+        progress: Math.random()*0.8,        // start at random progress so buses are spread out
+        direction: i%2===0 ? 1 : -1,       // some buses go forward, some reverse
+        serviceType,
+        speed: serviceProfiles[serviceType].speed * (1 + Math.random()*0.4) // slight variety
+      };
+      routeRecord.busObjects.push(bus);
+
+      // marker click update popup with runtime data
+      marker.on('click', () => {
+        const popupHtml = createBusPopupHtml({ busId, route, serviceType, startTime: route.startTime, estMin:route.estMin }, bus);
+        marker.setPopupContent(popupHtml);
+      });
+    }
+  }
+
+  function routeIndexSeed(id){
+    // small stable hash to use in service cycling
+    let s=0; for(let i=0;i<id.length;i++) s += id.charCodeAt(i);
+    return s % 5;
+  }
+
+  function createBusPopupHtml(meta, busObj){
+    // if busObj provided calculate ETA from its progress
+    const estMin = meta.estMin || meta.route?.estMin || 60;
+    if(busObj){
+      const passed = busObj.progress; // 0..1 relative along routeCoord segments
+      const remainingMin = Math.max(0, (1 - passed) * estMin);
+      const reachTime = timeAddMinutes(meta.startTime, estMin);
+      const nowETA = parseRouteTimeStringToMinutesString(Math.round(remainingMin));
+      return `<div class="bus-popup">
+        <div><strong>${meta.busId}</strong> — <span style="color:${serviceProfiles[meta.serviceType].color}">${meta.serviceType}</span></div>
+        <div>Route: ${meta.route.from} → ${meta.route.to}</div>
+        <div>Start: ${meta.startTime} | Reach: ${reachTime}</div>
+        <div>ETA to destination: ${nowETA}</div>
+        </div>`;
+    } else {
+      const reachTime = timeAddMinutes(meta.startTime, meta.estMin || meta.route?.estMin || 60);
+      return `<div class="bus-popup">
+        <div><strong>${meta.busId}</strong> — <span style="color:${serviceProfiles[meta.serviceType].color}">${meta.serviceType}</span></div>
+        <div>Route: ${meta.route.from} → ${meta.route.to}</div>
+        <div>Start: ${meta.startTime} | Reach: ${reachTime}</div>
+        </div>`;
+    }
+  }
+
+  // add one route & spawn buses; returns a record to manage it
+  function addRouteToMap(route){
+    const record = { routeId: route.id, polyline: null, stops: [], busObjects: [], timers: [] };
+
+    // draw polyline
+    const line = createRouteLine(route);
+    record.polyline = line;
+
+    // add stop markers for each coord (use small label number)
+    route.coords.forEach((c, idx) => {
+      const stopMarker = L.circleMarker(c, { radius:5, fill:true, fillColor:'#fff', color:'#c62828', weight:1 })
+        .addTo(map)
+        .bindPopup(`<b>${route.from} → ${route.to}</b><br>Stop ${idx+1}`);
+      record.stops.push(stopMarker);
+    });
+
+    // spawn buses
+    spawnBusesForRoute(route, record, 3);
+
+    // store
+    routeLines.push(record);
+    return record;
+  }
+
+  // ---------- Animate all buses ----------
+  // Each route record holds bus objects with progress & direction & speed
+  function startGlobalAnimation(){
+    // single interval handles updating positions for all buses for performance
+    const t = setInterval(()=>{
+      if(paused) return;
+      routeLines.forEach(record => {
+        record.busObjects.forEach(bus => {
+          // increment progress
+          bus.progress += bus.speed;
+          if(bus.progress>1) bus.progress = 0;      // loop
+          if(bus.progress<0) bus.progress = 1;
+
+          // compute segment positions
+          const coords = bus.routeCoords = record.polyline.getLatLngs();
+          const totalSegs = coords.length - 1;
+          const raw = bus.progress * totalSegs;
+          let seg = Math.floor(raw);
+          let segP = raw - seg;
+          if(seg >= totalSegs) seg = totalSegs - 1;
+
+          const [lat1, lon1] = [coords[seg].lat, coords[seg].lng];
+          const [lat2, lon2] = [coords[seg+1].lat, coords[seg+1].lng];
+          const lat = lat1 + (lat2 - lat1) * segP;
+          const lon = lon1 + (lon2 - lon1) * segP;
+
+          bus.marker.setLatLng([lat, lon]);
+          // update popup content live if open
+          if(bus.marker.isPopupOpen()){
+            const popupHtml = createBusPopupHtml({ busId: bus.id, route: record, serviceType: bus.serviceType, startTime: findRouteById(record.routeId).startTime, estMin: findRouteById(record.routeId).estMin }, bus);
+            bus.marker.setPopupContent(popupHtml);
+          }
+        });
+      });
+    }, 800); // update interval
+    globalTimers.push(t);
+  }
+
+  // Helpers to find route by id/record
+  function findRouteById(id){ return ROUTES.find(r=>r.id===id); }
+  function findRecordById(id){ return routeLines.find(r=>r.routeId===id); }
+
+  // ---------- Add all routes by default ----------
+  ROUTES.forEach(r => addRouteToMap(r));
+  startGlobalAnimation();
+
+  // ---------- Search: show only selected route ----------
+  function clearAllFromMap(){
+    // remove all polylines and markers & clear timers
+    routeLines.forEach(rec => {
+      if(rec.polyline) map.removeLayer(rec.polyline);
+      rec.stops.forEach(s => map.removeLayer(s));
+      rec.busObjects.forEach(b => map.removeLayer(b.marker));
+      // timers for each bus were not stored separately; global timer handles movement so we don't need to clear per-route timers
+    });
+    routeLines = [];
+    // stop global timers
+    globalTimers.forEach(t => clearInterval(t));
+    globalTimers = [];
+  }
+
+  function showSingleRoute(from, to){
+    // clear everything currently on map
+    clearAllFromMap();
+
+    // find route (exact match or case-insensitive)
+    const route = ROUTES.find(r => r.from.toLowerCase() === from.toLowerCase() && r.to.toLowerCase() === to.toLowerCase());
+    if(!route){
+      alert('Route not found — check spellings or try a similar nearby city.');
+      // restore all default if not found
+      ROUTES.forEach(r => addRouteToMap(r));
+      startGlobalAnimation();
+      return;
+    }
+
+    // add this route only
+    const rec = addRouteToMap(route);
+
+    // draw stops with ETA in popup (approx)
+    rec.stops.forEach((stop, idx) => {
+      const minutesToStop = Math.round((idx / (route.coords.length - 1)) * route.estMin);
+      stop.bindPopup(`<b>Stop ${idx+1}</b><br>${route.from} → ${route.to}<br>ETA from start: ${parseRouteTimeStringToMinutesString(minutesToStop)}`);
+    });
+
+    // zoom to route
+    map.fitBounds(rec.polyline.getBounds(), { maxZoom: 12 });
+
+    // start animation for only these buses (global timer)
+    startGlobalAnimation();
+  }
+
+  // ---------- Reset button restores all routes ----------
+  document.getElementById('resetBtn').addEventListener('click', ()=>{
+    // remove everything
+    clearAllFromMap();
+    // re-add
+    ROUTES.forEach(r => addRouteToMap(r));
+    startGlobalAnimation();
+    // clear search box
+    document.getElementById('fromInput').value=''; document.getElementById('toInput').value='';
+    map.setView([31.1,75.5],7);
+  });
+
+  document.getElementById('showAllBtn').addEventListener('click', ()=>{
+    document.getElementById('resetBtn').click();
+  });
+
+  // pause/resume global movement
+  document.getElementById('pauseBtn').addEventListener('click', ()=>{ paused = true; });
+  document.getElementById('resumeBtn').addEventListener('click', ()=>{ paused = false; });
+
+  // search form handler
+  document.getElementById('searchForm').addEventListener('submit', e=>{
+    e.preventDefault();
+    const from = document.getElementById('fromInput').value.trim();
+    const to   = document.getElementById('toInput').value.trim();
+    if(!from || !to){ alert('Please enter both From and To'); return; }
+    // hide all and show one
+    clearAllFromMap();
+    showSingleRoute(from, to);
+  });
+
+  // helper parse function used earlier for human readable minutes
+  function parseRouteTimeStringToMinutesString(mins){
+    if(mins>=60){ const h=Math.floor(mins/60), m=mins%60; return `${h}h ${m}m`; }
+    return `${mins}m`;
+  }
+
+  // show info tooltip on load
+  setTimeout(()=> {
+    const toastEl = document.createElement('div');
+    toastEl.className = 'toast align-items-center text-bg-danger border-0 position-fixed';
+    toastEl.style.right='12px'; toastEl.style.bottom='12px'; toastEl.style.zIndex=1500;
+    toastEl.innerHTML = `<div class="d-flex"><div class="toast-body">Map shows many PRTC routes by default. Use search to zoom a route.</div>
+      <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button></div>`;
+    document.body.appendChild(toastEl);
+    const toast = new bootstrap.Toast(toastEl); toast.show();
+  }, 800);
+
+  // initial fit
+  map.fitBounds(L.featureGroup(ROUTES.flatMap(r => r.coords.map(c=>L.latLng(c)))).getBounds(), { padding:[40,40] });
+
+  </script>
+</body>
+</html>
